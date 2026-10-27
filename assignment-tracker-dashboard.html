@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Assignment Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #f7f8fa;
+    color: #1f2328;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 36px 16px 60px;
+  }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  /* Header */
+  .page-header {
+    margin-bottom: 32px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 16px;
+  }
+  .page-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+  .page-header p  { color: #57606a; font-size: 14px; margin-top: 4px; }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 22px 18px;
+    text-align: center;
+  }
+  .card-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #57606a;
+    margin-bottom: 10px;
+  }
+  .card-value { font-size: 44px; font-weight: 700; line-height: 1; }
+  .card.total      .card-value { color: #3b82d4; }
+  .card.submitted  .card-value { color: #22863a; }
+  .card.not-submitted .card-value { color: #cf222e; }
+
+  .card-bar {
+    margin-top: 14px;
+    height: 5px;
+    border-radius: 99px;
+    background: #e5e7eb;
+    overflow: hidden;
+  }
+  .card-bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+  .card.total         .card-bar-fill { background: #3b82d4; width: 100%; }
+  .card.submitted     .card-bar-fill { background: #22863a; }
+  .card.not-submitted .card-bar-fill { background: #cf222e; }
+
+  /* Progress */
+  .progress-section {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .progress-header .label { font-size: 13px; font-weight: 600; color: #57606a; }
+  .progress-header .pct   { font-size: 13px; font-weight: 700; color: #22863a; }
+  .progress-bar-outer {
+    height: 10px; background: #e5e7eb; border-radius: 99px; overflow: hidden;
+  }
+  .progress-bar-inner {
+    height: 100%; background: #22863a; border-radius: 99px; transition: width 0.4s ease;
+  }
+
+  /* Checklist */
+  .checklist-section h2 {
+    font-size: 16px; font-weight: 700; margin-bottom: 12px;
+  }
+  .checklist {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item:hover { background: #f7f8fa; }
+
+  .checklist-item input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: #22863a;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .student-info { flex: 1; }
+  .student-name { font-weight: 600; font-size: 14px; color: #1f2328; transition: color 0.2s; }
+  .student-id   { font-size: 12px; color: #57606a; }
+
+  .status-badge {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 99px; letter-spacing: 0.3px;
+  }
+  .status-badge.pending   { background: #fff0f0; color: #cf222e; border: 1px solid #ffc1c1; }
+  .status-badge.submitted { background: #eafaf1; color: #22863a; border: 1px solid #a8e6bc; }
+
+  .checklist-item.done .student-name { text-decoration: line-through; color: #57606a; }
+
+  /* Footer */
+  .footer {
+    margin-top: 48px; text-align: center;
+    font-size: 12px; color: #57606a;
+    border-top: 1px solid #e5e7eb; padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <h1>My Assignment Tracker</h1>
+    <p>Track student submissions at a glance. Check off each student as they submit.</p>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="cards">
+    <div class="card total">
+      <div class="card-label">Total Students</div>
+      <div class="card-value" id="total-val">5</div>
+      <div class="card-bar"><div class="card-bar-fill" style="width:100%"></div></div>
+    </div>
+    <div class="card submitted">
+      <div class="card-label">Submitted</div>
+      <div class="card-value" id="submitted-val">0</div>
+      <div class="card-bar"><div class="card-bar-fill" id="submitted-bar" style="width:0%"></div></div>
+    </div>
+    <div class="card not-submitted">
+      <div class="card-label">Not Submitted</div>
+      <div class="card-value" id="pending-val">5</div>
+      <div class="card-bar"><div class="card-bar-fill" id="pending-bar" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="label">Submission Progress</span>
+      <span class="pct" id="pct-label">0%</span>
+    </div>
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="progress-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Checklist -->
+  <div class="checklist-section">
+    <h2>Student Submission Checklist</h2>
+    <div class="checklist" id="checklist">
+
+      <label class="checklist-item" id="row-1">
+        <input type="checkbox" onchange="toggle(1)">
+        <div class="student-info">
+          <div class="student-name">Alice Johnson</div>
+          <div class="student-id">Student #001</div>
+        </div>
+        <span class="status-badge pending" id="badge-1">Pending</span>
+      </label>
+
+      <label class="checklist-item" id="row-2">
+        <input type="checkbox" onchange="toggle(2)">
+        <div class="student-info">
+          <div class="student-name">Bob Smith</div>
+          <div class="student-id">Student #002</div>
+        </div>
+        <span class="status-badge pending" id="badge-2">Pending</span>
+      </label>
+
+      <label class="checklist-item" id="row-3">
+        <input type="checkbox" onchange="toggle(3)">
+        <div class="student-info">
+          <div class="student-name">Carol White</div>
+          <div class="student-id">Student #003</div>
+        </div>
+        <span class="status-badge pending" id="badge-3">Pending</span>
+      </label>
+
+      <label class="checklist-item" id="row-4">
+        <input type="checkbox" onchange="toggle(4)">
+        <div class="student-info">
+          <div class="student-name">David Brown</div>
+          <div class="student-id">Student #004</div>
+        </div>
+        <span class="status-badge pending" id="badge-4">Pending</span>
+      </label>
+
+      <label class="checklist-item" id="row-5">
+        <input type="checkbox" onchange="toggle(5)">
+        <div class="student-info">
+          <div class="student-name">Emma Davis</div>
+          <div class="student-id">Student #005</div>
+        </div>
+        <span class="status-badge pending" id="badge-5">Pending</span>
+      </label>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">Made with IBM Bob</div>
+
+<script>
+  const total = 5;
+
+  function toggle(id) {
+    const row   = document.getElementById('row-'   + id);
+    const badge = document.getElementById('badge-' + id);
+    const cb    = row.querySelector('input[type="checkbox"]');
+
+    if (cb.checked) {
+      row.classList.add('done');
+      badge.textContent = 'Submitted';
+      badge.className   = 'status-badge submitted';
+    } else {
+      row.classList.remove('done');
+      badge.textContent = 'Pending';
+      badge.className   = 'status-badge pending';
+    }
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const checked = document.querySelectorAll('#checklist input:checked').length;
+    const pending = total - checked;
+    const pct     = Math.round((checked / total) * 100);
+
+    document.getElementById('submitted-val').textContent   = checked;
+    document.getElementById('pending-val').textContent     = pending;
+    document.getElementById('pct-label').textContent       = pct + '%';
+    document.getElementById('progress-bar').style.width    = pct + '%';
+    document.getElementById('submitted-bar').style.width   = pct + '%';
+    document.getElementById('pending-bar').style.width     = Math.round((pending / total) * 100) + '%';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Kelab Hoteliers — PKK</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .sidebar-link { transition: background 0.2s, color 0.2s; }
+    .sidebar-link.aktif { background: #1e3a5f; color: #f0c040; }
+    .sidebar-link:hover:not(.aktif) { background: #1a3352; }
+    .modul { display: none; }
+    .modul.aktif { display: block; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; }
+    .modal-overlay.aktif { display: flex; }
+    input, select, textarea { transition: border-color 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #1e3a5f; box-shadow: 0 0 0 2px rgba(30,58,95,0.15); }
+    table { border-collapse: collapse; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-aktif { background: #d1fae5; color: #065f46; }
+    .badge-tidak { background: #fee2e2; color: #991b1b; }
+    .badge-akan { background: #dbeafe; color: #1e40af; }
+    .badge-berjalan { background: #fef9c3; color: #854d0e; }
+    .badge-selesai { background: #f3f4f6; color: #374151; }
+    .badge-masuk { background: #d1fae5; color: #065f46; }
+    .badge-keluar { background: #fee2e2; color: #991b1b; }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.aktif-tab { border-bottom: 3px solid #1e3a5f; color: #1e3a5f; font-weight: 700; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="w-64 min-h-screen bg-[#162d4a] text-white flex flex-col fixed top-0 left-0 z-40 shadow-xl">
+    <!-- Logo & Nama -->
+    <div class="px-5 py-5 border-b border-[#1e3a5f]">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#f0c040] rounded-lg flex items-center justify-center text-[#162d4a] font-bold text-lg">H</div>
+        <div>
+          <div class="font-bold text-sm leading-tight">Kelab Hoteliers</div>
+          <div class="text-xs text-gray-400">Politeknik KK</div>
+        </div>
+      </div>
+    </div>
+    <!-- Navigasi -->
+    <nav class="flex-1 py-4 px-2 space-y-1">
+      <button onclick="tukarModul('utama')" class="sidebar-link aktif w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 text-sm" id="nav-utama">
+        <span class="text-lg">🏠</span> Utama
+      </button>
+      <button onclick="tukarModul('ahli')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 text-sm text-gray-300" id="nav-ahli">
+        <span class="text-lg">👥</span> Pengurusan Ahli
+      </button>
+      <button onclick="tukarModul('aktiviti')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 text-sm text-gray-300" id="nav-aktiviti">
+        <span class="text-lg">📅</span> Aktiviti & Kehadiran
+      </button>
+      <button onclick="tukarModul('kewangan')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 text-sm text-gray-300" id="nav-kewangan">
+        <span class="text-lg">💰</span> Kewangan
+      </button>
+      <button onclick="tukarModul('pencapaian')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 text-sm text-gray-300" id="nav-pencapaian">
+        <span class="text-lg">🏆</span> Pencapaian
+      </button>
+    </nav>
+    <div class="px-4 py-3 border-t border-[#1e3a5f] text-xs text-gray-500 text-center">
+      Jabatan Pelancongan &amp; Hospitaliti<br/>© 2025
+    </div>
+  </aside>
+
+  <!-- KANDUNGAN UTAMA -->
+  <main class="ml-64 flex-1 flex flex-col min-h-screen">
+    <!-- HEADER -->
+    <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <div>
+        <h1 id="tajuk-halaman" class="text-xl font-bold text-[#162d4a]">Dashboard Utama</h1>
+        <p class="text-xs text-gray-500" id="sub-tajuk">Ringkasan aktiviti dan ahli Kelab Hoteliers</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="tarikh-sekarang" class="text-sm text-gray-500"></span>
+        <div class="w-9 h-9 bg-[#162d4a] rounded-full flex items-center justify-center text-white font-bold text-sm">P</div>
+      </div>
+    </header>
+
+    <!-- ISI KANDUNGAN -->
+    <div class="flex-1 p-8">
+
+      <!-- ==================== MODUL UTAMA ==================== -->
+      <div id="modul-utama" class="modul aktif">
+        <!-- Kad Statistik -->
+        <div class="grid grid-cols-4 gap-5 mb-8">
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-2xl">👥</span>
+              <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">Ahli</span>
+            </div>
+            <div class="text-3xl font-bold text-[#162d4a]" id="stat-jumlah-ahli">0</div>
+            <div class="text-sm text-gray-500 mt-1">Jumlah Ahli</div>
+            <div class="text-xs text-green-600 mt-2" id="stat-ahli-aktif">0 aktif</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-2xl">📅</span>
+              <span class="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Aktiviti</span>
+            </div>
+            <div class="text-3xl font-bold text-[#162d4a]" id="stat-jumlah-aktiviti">0</div>
+            <div class="text-sm text-gray-500 mt-1">Jumlah Aktiviti</div>
+            <div class="text-xs text-blue-600 mt-2" id="stat-aktiviti-akan">0 akan datang</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-2xl">📊</span>
+              <span class="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">Kehadiran</span>
+            </div>
+            <div class="text-3xl font-bold text-[#162d4a]" id="stat-kehadiran">—</div>
+            <div class="text-sm text-gray-500 mt-1">Purata Kehadiran</div>
+            <div class="text-xs text-gray-400 mt-2">Semua aktiviti selesai</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-2xl">💰</span>
+              <span class="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Kewangan</span>
+            </div>
+            <div class="text-3xl font-bold text-[#162d4a]" id="stat-baki">RM 0</div>
+            <div class="text-sm text-gray-500 mt-1">Baki Semasa</div>
+            <div class="text-xs text-gray-400 mt-2" id="stat-kewangan-info">Tiada transaksi</div>
+          </div>
+        </div>
+        <!-- Graf & Aktiviti -->
+        <div class="grid grid-cols-3 gap-5">
+          <div class="col-span-2 bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-[#162d4a] mb-4">Kehadiran Aktiviti (Terkini)</h3>
+            <canvas id="chartKehadiran" height="100"></canvas>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-[#162d4a] mb-4">Aktiviti Akan Datang</h3>
+            <div id="senarai-akan-datang" class="space-y-3 text-sm"></div>
+          </div>
+        </div>
+        <!-- Pencapaian Terkini -->
+        <div class="mt-5 bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+          <h3 class="font-bold text-[#162d4a] mb-4">Pencapaian Terkini</h3>
+          <div id="pencapaian-terkini" class="grid grid-cols-4 gap-4 text-sm"></div>
+        </div>
+      </div>
+
+      <!-- ==================== MODUL AHLI ==================== -->
+      <div id="modul-ahli" class="modul">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex gap-3 items-center">
+            <input type="text" id="cari-ahli" placeholder="Cari nama atau no. matrik..." class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-64" oninput="renderAhli()" />
+            <select id="tapisan-status-ahli" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderAhli()">
+              <option value="">Semua Status</option>
+              <option value="Aktif">Aktif</option>
+              <option value="Tidak Aktif">Tidak Aktif</option>
+            </select>
+            <select id="tapisan-jawatan-ahli" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderAhli()">
+              <option value="">Semua Jawatan</option>
+              <option value="Pengerusi">Pengerusi</option>
+              <option value="Timbalan Pengerusi">Timbalan Pengerusi</option>
+              <option value="Setiausaha">Setiausaha</option>
+              <option value="Bendahari">Bendahari</option>
+              <option value="Ahli Jawatankuasa">Ahli Jawatankuasa</option>
+              <option value="Ahli Biasa">Ahli Biasa</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="eksportAhliExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg flex items-center gap-2">
+              📥 Eksport Excel
+            </button>
+            <button onclick="bukaModalAhli()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-4 py-2 rounded-lg flex items-center gap-2">
+              + Tambah Ahli
+            </button>
+          </div>
+        </div>
+        <!-- Ringkasan ahli -->
+        <div class="grid grid-cols-3 gap-4 mb-5">
+          <div class="bg-white rounded-xl p-4 border border-gray-200 text-center">
+            <div class="text-2xl font-bold text-[#162d4a]" id="kiraan-jumlah">0</div>
+            <div class="text-xs text-gray-500">Jumlah Ahli</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-gray-200 text-center">
+            <div class="text-2xl font-bold text-green-600" id="kiraan-aktif">0</div>
+            <div class="text-xs text-gray-500">Aktif</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-gray-200 text-center">
+            <div class="text-2xl font-bold text-red-500" id="kiraan-tidak-aktif">0</div>
+            <div class="text-xs text-gray-500">Tidak Aktif</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-[#162d4a] text-white">
+                <th class="px-4 py-3 text-left">Bil</th>
+                <th class="px-4 py-3 text-left">Nama</th>
+                <th class="px-4 py-3 text-left">No. Matrik</th>
+                <th class="px-4 py-3 text-left">No. Telefon</th>
+                <th class="px-4 py-3 text-left">Tahun</th>
+                <th class="px-4 py-3 text-left">Jawatan</th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-center">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="jadual-ahli"></tbody>
+          </table>
+          <div id="tiada-ahli" class="hidden text-center py-12 text-gray-400">
+            <div class="text-4xl mb-3">👥</div>
+            <div>Tiada ahli dijumpai. Klik "+ Tambah Ahli" untuk menambah.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MODUL AKTIVITI ==================== -->
+      <div id="modul-aktiviti" class="modul">
+        <!-- Tab -->
+        <div class="flex gap-6 border-b border-gray-200 mb-6">
+          <button class="tab-btn aktif-tab pb-3 text-sm" onclick="tukarTabAktiviti('senarai')" id="tab-senarai">Senarai Aktiviti</button>
+          <button class="tab-btn pb-3 text-sm text-gray-500" onclick="tukarTabAktiviti('kehadiran')" id="tab-kehadiran">Rekod Kehadiran</button>
+        </div>
+        <!-- Tab Senarai Aktiviti -->
+        <div id="tab-panel-senarai">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex gap-3">
+              <select id="tapisan-status-aktiviti" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderAktiviti()">
+                <option value="">Semua Status</option>
+                <option value="Akan Datang">Akan Datang</option>
+                <option value="Sedang Berjalan">Sedang Berjalan</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+            </div>
+            <button onclick="bukaModalAktiviti()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-4 py-2 rounded-lg">
+              + Tambah Aktiviti
+            </button>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-[#162d4a] text-white">
+                  <th class="px-4 py-3 text-left">Bil</th>
+                  <th class="px-4 py-3 text-left">Nama Aktiviti</th>
+                  <th class="px-4 py-3 text-left">Tarikh</th>
+                  <th class="px-4 py-3 text-left">Tempat</th>
+                  <th class="px-4 py-3 text-left">Status</th>
+                  <th class="px-4 py-3 text-left">Kehadiran</th>
+                  <th class="px-4 py-3 text-center">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="jadual-aktiviti"></tbody>
+            </table>
+            <div id="tiada-aktiviti" class="hidden text-center py-12 text-gray-400">
+              <div class="text-4xl mb-3">📅</div>
+              <div>Tiada aktiviti. Klik "+ Tambah Aktiviti" untuk menambah.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Tab Rekod Kehadiran -->
+        <div id="tab-panel-kehadiran" class="hidden">
+          <div class="flex items-center gap-4 mb-5">
+            <label class="text-sm font-medium text-gray-700">Pilih Aktiviti:</label>
+            <select id="pilih-aktiviti-kehadiran" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-72" onchange="renderKehadiran()">
+              <option value="">-- Pilih Aktiviti --</option>
+            </select>
+            <button onclick="eksportKehadiranPDF()" class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg ml-auto">
+              📄 Eksport PDF
+            </button>
+          </div>
+          <div id="panel-kehadiran" class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div class="text-center text-gray-400 py-8">Pilih aktiviti untuk melihat dan merekod kehadiran.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MODUL KEWANGAN ==================== -->
+      <div id="modul-kewangan" class="modul">
+        <!-- Kad Ringkasan -->
+        <div class="grid grid-cols-3 gap-5 mb-6">
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="text-sm text-gray-500 mb-1">Jumlah Masuk</div>
+            <div class="text-2xl font-bold text-green-600" id="kew-masuk">RM 0.00</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="text-sm text-gray-500 mb-1">Jumlah Keluar</div>
+            <div class="text-2xl font-bold text-red-500" id="kew-keluar">RM 0.00</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="text-sm text-gray-500 mb-1">Baki Semasa</div>
+            <div class="text-2xl font-bold text-[#162d4a]" id="kew-baki">RM 0.00</div>
+          </div>
+        </div>
+        <!-- Tab Kewangan -->
+        <div class="flex gap-6 border-b border-gray-200 mb-6">
+          <button class="tab-btn aktif-tab pb-3 text-sm" onclick="tukarTabKewangan('transaksi')" id="tab-transaksi">Rekod Transaksi</button>
+          <button class="tab-btn pb-3 text-sm text-gray-500" onclick="tukarTabKewangan('yuran')" id="tab-yuran">Status Yuran Ahli</button>
+          <button class="tab-btn pb-3 text-sm text-gray-500" onclick="tukarTabKewangan('carta')" id="tab-carta-kew">Carta Perbelanjaan</button>
+        </div>
+        <!-- Tab Transaksi -->
+        <div id="tab-panel-transaksi">
+          <div class="flex items-center justify-between mb-4">
+            <select id="tapisan-jenis-transaksi" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderKewangan()">
+              <option value="">Semua Jenis</option>
+              <option value="Masuk">Masuk</option>
+              <option value="Keluar">Keluar</option>
+            </select>
+            <div class="flex gap-2">
+              <button onclick="eksportKewanganExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg">📥 Eksport Excel</button>
+              <button onclick="bukaModalKewangan()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-4 py-2 rounded-lg">+ Tambah Transaksi</button>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-[#162d4a] text-white">
+                  <th class="px-4 py-3 text-left">Tarikh</th>
+                  <th class="px-4 py-3 text-left">Penerangan</th>
+                  <th class="px-4 py-3 text-left">Kategori</th>
+                  <th class="px-4 py-3 text-left">Jenis</th>
+                  <th class="px-4 py-3 text-right">Amaun (RM)</th>
+                  <th class="px-4 py-3 text-center">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="jadual-kewangan"></tbody>
+            </table>
+            <div id="tiada-kewangan" class="hidden text-center py-12 text-gray-400">
+              <div class="text-4xl mb-3">💰</div>
+              <div>Tiada rekod transaksi.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Tab Yuran -->
+        <div id="tab-panel-yuran" class="hidden">
+          <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-[#162d4a] text-white">
+                  <th class="px-4 py-3 text-left">Nama Ahli</th>
+                  <th class="px-4 py-3 text-left">No. Matrik</th>
+                  <th class="px-4 py-3 text-left">Jawatan</th>
+                  <th class="px-4 py-3 text-center">Status Yuran</th>
+                  <th class="px-4 py-3 text-center">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="jadual-yuran"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Tab Carta Perbelanjaan -->
+        <div id="tab-panel-carta-kew" class="hidden">
+          <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm max-w-lg mx-auto">
+            <h3 class="font-bold text-[#162d4a] mb-4 text-center">Pecahan Perbelanjaan Mengikut Kategori</h3>
+            <canvas id="chartPerbelanjaan"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MODUL PENCAPAIAN ==================== -->
+      <div id="modul-pencapaian" class="modul">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex gap-3">
+            <select id="tapisan-kategori-pencapaian" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderPencapaian()">
+              <option value="">Semua Kategori</option>
+              <option value="Pertandingan">Pertandingan</option>
+              <option value="Anugerah">Anugerah</option>
+              <option value="Pengiktirafan">Pengiktirafan</option>
+              <option value="Lain-lain">Lain-lain</option>
+            </select>
+          </div>
+          <button onclick="bukaModalPencapaian()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-4 py-2 rounded-lg">
+            + Tambah Pencapaian
+          </button>
+        </div>
+        <div id="grid-pencapaian" class="grid grid-cols-3 gap-5"></div>
+        <div id="tiada-pencapaian" class="hidden text-center py-16 text-gray-400">
+          <div class="text-5xl mb-4">🏆</div>
+          <div>Tiada rekod pencapaian. Klik "+ Tambah Pencapaian" untuk menambah.</div>
+        </div>
+      </div>
+
+    </div><!-- /p-8 -->
+  </main>
+
+  <!-- ==================== MODAL AHLI ==================== -->
+  <div id="modal-ahli" class="modal-overlay">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div class="bg-[#162d4a] px-6 py-4 flex items-center justify-between">
+        <h3 class="text-white font-bold" id="modal-ahli-tajuk">Tambah Ahli Baru</h3>
+        <button onclick="tutupModal('modal-ahli')" class="text-gray-300 hover:text-white text-xl">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="ahli-id" />
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Penuh *</label>
+            <input type="text" id="ahli-nama" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Masukkan nama penuh" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">No. Matrik *</label>
+            <input type="text" id="ahli-matrik" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="cth: HT2401001" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">No. Telefon</label>
+            <input type="text" id="ahli-telefon" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="cth: 0123456789" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">E-mel</label>
+            <input type="email" id="ahli-emel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="cth: nama@gmail.com" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tahun Pengajian</label>
+            <select id="ahli-tahun" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="1">Tahun 1</option>
+              <option value="2">Tahun 2</option>
+              <option value="3">Tahun 3</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Jawatan</label>
+            <select id="ahli-jawatan" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option>Ahli Biasa</option>
+              <option>Pengerusi</option>
+              <option>Timbalan Pengerusi</option>
+              <option>Setiausaha</option>
+              <option>Bendahari</option>
+              <option>Ahli Jawatankuasa</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+            <select id="ahli-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="Aktif">Aktif</option>
+              <option value="Tidak Aktif">Tidak Aktif</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 pb-5 flex justify-end gap-3">
+        <button onclick="tutupModal('modal-ahli')" class="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded-lg hover:bg-gray-50">Batal</button>
+        <button onclick="simpanAhli()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-5 py-2 rounded-lg">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL AKTIVITI ==================== -->
+  <div id="modal-aktiviti" class="modal-overlay">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div class="bg-[#162d4a] px-6 py-4 flex items-center justify-between">
+        <h3 class="text-white font-bold" id="modal-aktiviti-tajuk">Tambah Aktiviti Baru</h3>
+        <button onclick="tutupModal('modal-aktiviti')" class="text-gray-300 hover:text-white text-xl">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="aktiviti-id" />
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Aktiviti *</label>
+          <input type="text" id="aktiviti-nama" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Nama aktiviti" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tarikh *</label>
+            <input type="date" id="aktiviti-tarikh" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+            <select id="aktiviti-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option>Akan Datang</option>
+              <option>Sedang Berjalan</option>
+              <option>Selesai</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Tempat</label>
+          <input type="text" id="aktiviti-tempat" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Lokasi aktiviti" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Penerangan</label>
+          <textarea id="aktiviti-penerangan" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" rows="3" placeholder="Penerangan ringkas aktiviti"></textarea>
+        </div>
+      </div>
+      <div class="px-6 pb-5 flex justify-end gap-3">
+        <button onclick="tutupModal('modal-aktiviti')" class="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded-lg hover:bg-gray-50">Batal</button>
+        <button onclick="simpanAktiviti()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-5 py-2 rounded-lg">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL KEWANGAN ==================== -->
+  <div id="modal-kewangan" class="modal-overlay">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="bg-[#162d4a] px-6 py-4 flex items-center justify-between">
+        <h3 class="text-white font-bold">Tambah Transaksi</h3>
+        <button onclick="tutupModal('modal-kewangan')" class="text-gray-300 hover:text-white text-xl">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="kew-id" />
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Jenis *</label>
+          <select id="kew-jenis" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="Masuk">Masuk (Pendapatan)</option>
+            <option value="Keluar">Keluar (Perbelanjaan)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Penerangan *</label>
+          <input type="text" id="kew-penerangan" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Penerangan transaksi" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Kategori</label>
+            <select id="kew-kategori" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option>Yuran Ahli</option>
+              <option>Aktiviti</option>
+              <option>Peralatan</option>
+              <option>Makanan</option>
+              <option>Pengangkutan</option>
+              <option>Lain-lain</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tarikh *</label>
+            <input type="date" id="kew-tarikh" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Amaun (RM) *</label>
+          <input type="number" id="kew-amaun" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="0.00" min="0" step="0.01" />
+        </div>
+      </div>
+      <div class="px-6 pb-5 flex justify-end gap-3">
+        <button onclick="tutupModal('modal-kewangan')" class="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded-lg hover:bg-gray-50">Batal</button>
+        <button onclick="simpanKewangan()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-5 py-2 rounded-lg">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PENCAPAIAN ==================== -->
+  <div id="modal-pencapaian" class="modal-overlay">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div class="bg-[#162d4a] px-6 py-4 flex items-center justify-between">
+        <h3 class="text-white font-bold" id="modal-pencapaian-tajuk">Tambah Pencapaian</h3>
+        <button onclick="tutupModal('modal-pencapaian')" class="text-gray-300 hover:text-white text-xl">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="pencapaian-id" />
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Tajuk Pencapaian *</label>
+          <input type="text" id="pencapaian-tajuk" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Nama anugerah / pencapaian" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tarikh *</label>
+            <input type="date" id="pencapaian-tarikh" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Kategori</label>
+            <select id="pencapaian-kategori" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option>Pertandingan</option>
+              <option>Anugerah</option>
+              <option>Pengiktirafan</option>
+              <option>Lain-lain</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Penerima</label>
+          <input type="text" id="pencapaian-penerima" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Nama ahli / kelab" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Penerangan</label>
+          <textarea id="pencapaian-penerangan" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" rows="3" placeholder="Penerangan pencapaian"></textarea>
+        </div>
+      </div>
+      <div class="px-6 pb-5 flex justify-end gap-3">
+        <button onclick="tutupModal('modal-pencapaian')" class="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded-lg hover:bg-gray-50">Batal</button>
+        <button onclick="simpanPencapaian()" class="bg-[#162d4a] hover:bg-[#1e3a5f] text-white text-sm px-5 py-2 rounded-lg">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFIKASI TOAST -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div class="bg-[#162d4a] text-white px-5 py-3 rounded-xl shadow-lg text-sm flex items-center gap-2">
+      <span id="toast-ikon">✅</span>
+      <span id="toast-mesej">Berjaya disimpan</span>
+    </div>
+  </div>
+
+<script>
+// ======================== DATA STORAGE ========================
+const KEYS = {
+  ahli: 'hoteliers_ahli',
+  aktiviti: 'hoteliers_aktiviti',
+  kewangan: 'hoteliers_kewangan',
+  pencapaian: 'hoteliers_pencapaian',
+  yuran: 'hoteliers_yuran'
+};
+
+function dapatData(key) {
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+function simpanData(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+function janaId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// ======================== NAVIGASI ========================
+const maklumatModul = {
+  utama:      { tajuk: 'Dashboard Utama',         sub: 'Ringkasan aktiviti dan ahli Kelab Hoteliers' },
+  ahli:       { tajuk: 'Pengurusan Ahli',         sub: 'Rekod dan urus maklumat ahli kelab' },
+  aktiviti:   { tajuk: 'Aktiviti & Kehadiran',    sub: 'Urus aktiviti dan rekod kehadiran ahli' },
+  kewangan:   { tajuk: 'Kewangan',                sub: 'Penjejakan yuran, perbelanjaan dan baki kelab' },
+  pencapaian: { tajuk: 'Pencapaian',              sub: 'Rekod anugerah dan pencapaian kelab' }
+};
+
+let chartKehadiran = null;
+let chartPerbelanjaan = null;
+
+function tukarModul(modul) {
+  document.querySelectorAll('.modul').forEach(m => m.classList.remove('aktif'));
+  document.querySelectorAll('.sidebar-link').forEach(l => {
+    l.classList.remove('aktif');
+    l.classList.add('text-gray-300');
+  });
+  document.getElementById('modul-' + modul).classList.add('aktif');
+  const nav = document.getElementById('nav-' + modul);
+  nav.classList.add('aktif');
+  nav.classList.remove('text-gray-300');
+  document.getElementById('tajuk-halaman').textContent = maklumatModul[modul].tajuk;
+  document.getElementById('sub-tajuk').textContent = maklumatModul[modul].sub;
+
+  if (modul === 'utama') renderUtama();
+  if (modul === 'ahli') renderAhli();
+  if (modul === 'aktiviti') renderAktiviti();
+  if (modul === 'kewangan') renderKewangan();
+  if (modul === 'pencapaian') renderPencapaian();
+}
+
+// ======================== TOAST ========================
+function tunjukToast(mesej, jenis = 'berjaya') {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-ikon').textContent = jenis === 'berjaya' ? '✅' : '❌';
+  document.getElementById('toast-mesej').textContent = mesej;
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+
+// ======================== MODAL ========================
+function tutupModal(id) {
+  document.getElementById(id).classList.remove('aktif');
+}
+window.onclick = function(e) {
+  ['modal-ahli','modal-aktiviti','modal-kewangan','modal-pencapaian'].forEach(id => {
+    if (e.target === document.getElementById(id)) tutupModal(id);
+  });
+};
+
+// ======================== TARIKH ========================
+function formatTarikh(t) {
+  if (!t) return '—';
+  const d = new Date(t);
+  return d.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function tarikhSekarang() {
+  return new Date().toLocaleDateString('ms-MY', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+// ======================== MODUL UTAMA ========================
+function renderUtama() {
+  const ahli = dapatData(KEYS.ahli);
+  const aktiviti = dapatData(KEYS.aktiviti);
+  const kewangan = dapatData(KEYS.kewangan);
+  const pencapaian = dapatData(KEYS.pencapaian);
+
+  // Statistik ahli
+  document.getElementById('stat-jumlah-ahli').textContent = ahli.length;
+  const aktif = ahli.filter(a => a.status === 'Aktif').length;
+  document.getElementById('stat-ahli-aktif').textContent = aktif + ' aktif';
+
+  // Statistik aktiviti
+  document.getElementById('stat-jumlah-aktiviti').textContent = aktiviti.length;
+  const akan = aktiviti.filter(a => a.status === 'Akan Datang').length;
+  document.getElementById('stat-aktiviti-akan').textContent = akan + ' akan datang';
+
+  // Kehadiran purata
+  const selesai = aktiviti.filter(a => a.status === 'Selesai' && a.kehadiran);
+  if (selesai.length > 0 && ahli.length > 0) {
+    const purata = selesai.reduce((s, a) => s + (a.kehadiran.length / ahli.length * 100), 0) / selesai.length;
+    document.getElementById('stat-kehadiran').textContent = purata.toFixed(0) + '%';
+  }
+
+  // Kewangan
+  const masuk = kewangan.filter(k => k.jenis === 'Masuk').reduce((s, k) => s + parseFloat(k.amaun), 0);
+  const keluar = kewangan.filter(k => k.jenis === 'Keluar').reduce((s, k) => s + parseFloat(k.amaun), 0);
+  document.getElementById('stat-baki').textContent = 'RM ' + (masuk - keluar).toFixed(2);
+  document.getElementById('stat-kewangan-info').textContent = kewangan.length + ' transaksi';
+
+  // Graf kehadiran
+  const selesaiGraf = aktiviti.filter(a => a.status === 'Selesai').slice(-6);
+  const labelGraf = selesaiGraf.map(a => a.nama.length > 15 ? a.nama.substring(0,15)+'…' : a.nama);
+  const dataGraf = selesaiGraf.map(a => a.kehadiran ? a.kehadiran.length : 0);
+
+  if (chartKehadiran) chartKehadiran.destroy();
+  const ctx = document.getElementById('chartKehadiran').getContext('2d');
+  chartKehadiran = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labelGraf.length ? labelGraf : ['Tiada data'],
+      datasets: [{
+        label: 'Bilangan Hadir',
+        data: dataGraf.length ? dataGraf : [0],
+        backgroundColor: '#162d4a',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+
+  // Aktiviti akan datang
+  const akan5 = aktiviti.filter(a => a.status === 'Akan Datang').sort((a,b) => new Date(a.tarikh)-new Date(b.tarikh)).slice(0,5);
+  const divAkan = document.getElementById('senarai-akan-datang');
+  divAkan.innerHTML = akan5.length ? akan5.map(a => `
+    <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+      <div class="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+      <div>
+        <div class="font-semibold text-xs text-gray-800">${a.nama}</div>
+        <div class="text-xs text-gray-500">${formatTarikh(a.tarikh)}</div>
+        <div class="text-xs text-gray-400">${a.tempat || '—'}</div>
+      </div>
+    </div>`).join('') : '<div class="text-gray-400 text-xs text-center py-4">Tiada aktiviti akan datang</div>';
+
+  // Pencapaian terkini
+  const pencTerkini = pencapaian.slice(-4).reverse();
+  const divPenc = document.getElementById('pencapaian-terkini');
+  divPenc.innerHTML = pencTerkini.length ? pencTerkini.map(p => `
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+      <div class="text-2xl mb-2">${ikonKategoriPencapaian(p.kategori)}</div>
+      <div class="font-bold text-xs text-gray-800 mb-1">${p.tajuk}</div>
+      <div class="text-xs text-gray-500">${p.penerima || 'Kelab'}</div>
+      <div class="text-xs text-amber-600 mt-1">${formatTarikh(p.tarikh)}</div>
+    </div>`).join('') : '<div class="col-span-4 text-gray-400 text-xs text-center py-4">Tiada rekod pencapaian</div>';
+}
+
+// ======================== MODUL AHLI ========================
+function bukaModalAhli(id = null) {
+  document.getElementById('modal-ahli-tajuk').textContent = id ? 'Kemaskini Maklumat Ahli' : 'Tambah Ahli Baru';
+  document.getElementById('ahli-id').value = '';
+  ['nama','matrik','telefon','emel'].forEach(f => document.getElementById('ahli-'+f).value = '');
+  document.getElementById('ahli-tahun').value = '1';
+  document.getElementById('ahli-jawatan').value = 'Ahli Biasa';
+  document.getElementById('ahli-status').value = 'Aktif';
+
+  if (id) {
+    const ahli = dapatData(KEYS.ahli).find(a => a.id === id);
+    if (ahli) {
+      document.getElementById('ahli-id').value = ahli.id;
+      document.getElementById('ahli-nama').value = ahli.nama;
+      document.getElementById('ahli-matrik').value = ahli.noMatrik;
+      document.getElementById('ahli-telefon').value = ahli.noTelefon || '';
+      document.getElementById('ahli-emel').value = ahli.emel || '';
+      document.getElementById('ahli-tahun').value = ahli.tahunPengajian;
+      document.getElementById('ahli-jawatan').value = ahli.jawatan;
+      document.getElementById('ahli-status').value = ahli.status;
+    }
+  }
+  document.getElementById('modal-ahli').classList.add('aktif');
+}
+
+function simpanAhli() {
+  const nama = document.getElementById('ahli-nama').value.trim();
+  const matrik = document.getElementById('ahli-matrik').value.trim();
+  if (!nama || !matrik) { tunjukToast('Sila isi Nama dan No. Matrik', 'ralat'); return; }
+
+  const ahliData = dapatData(KEYS.ahli);
+  const id = document.getElementById('ahli-id').value;
+  const objek = {
+    id: id || janaId(),
+    nama, noMatrik: matrik,
+    noTelefon: document.getElementById('ahli-telefon').value.trim(),
+    emel: document.getElementById('ahli-emel').value.trim(),
+    tahunPengajian: document.getElementById('ahli-tahun').value,
+    jawatan: document.getElementById('ahli-jawatan').value,
+    status: document.getElementById('ahli-status').value,
+    yuranBayar: false
+  };
+
+  if (id) {
+    const idx = ahliData.findIndex(a => a.id === id);
+    if (idx > -1) { objek.yuranBayar = ahliData[idx].yuranBayar; ahliData[idx] = objek; }
+  } else {
+    ahliData.push(objek);
+  }
+  simpanData(KEYS.ahli, ahliData);
+  tutupModal('modal-ahli');
+  tunjukToast(id ? 'Maklumat ahli dikemaskini' : 'Ahli baru ditambah');
+  renderAhli();
+}
+
+function padamAhli(id) {
+  if (!confirm('Adakah anda pasti mahu memadam ahli ini?')) return;
+  simpanData(KEYS.ahli, dapatData(KEYS.ahli).filter(a => a.id !== id));
+  tunjukToast('Ahli telah dipadam');
+  renderAhli();
+}
+
+function renderAhli() {
+  const cari = document.getElementById('cari-ahli').value.toLowerCase();
+  const status = document.getElementById('tapisan-status-ahli').value;
+  const jawatan = document.getElementById('tapisan-jawatan-ahli').value;
+  let ahli = dapatData(KEYS.ahli);
+  if (cari) ahli = ahli.filter(a => a.nama.toLowerCase().includes(cari) || a.noMatrik.toLowerCase().includes(cari));
+  if (status) ahli = ahli.filter(a => a.status === status);
+  if (jawatan) ahli = ahli.filter(a => a.jawatan === jawatan);
+
+  const semua = dapatData(KEYS.ahli);
+  document.getElementById('kiraan-jumlah').textContent = semua.length;
+  document.getElementById('kiraan-aktif').textContent = semua.filter(a => a.status === 'Aktif').length;
+  document.getElementById('kiraan-tidak-aktif').textContent = semua.filter(a => a.status === 'Tidak Aktif').length;
+
+  const tbody = document.getElementById('jadual-ahli');
+  const tiada = document.getElementById('tiada-ahli');
+  if (!ahli.length) { tbody.innerHTML = ''; tiada.classList.remove('hidden'); return; }
+  tiada.classList.add('hidden');
+
+  tbody.innerHTML = ahli.map((a, i) => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3 text-gray-500">${i+1}</td>
+      <td class="px-4 py-3 font-medium text-gray-800">${a.nama}</td>
+      <td class="px-4 py-3 text-gray-600">${a.noMatrik}</td>
+      <td class="px-4 py-3 text-gray-600">${a.noTelefon || '—'}</td>
+      <td class="px-4 py-3 text-gray-600">Tahun ${a.tahunPengajian}</td>
+      <td class="px-4 py-3 text-gray-600">${a.jawatan}</td>
+      <td class="px-4 py-3"><span class="badge ${a.status === 'Aktif' ? 'badge-aktif' : 'badge-tidak'}">${a.status}</span></td>
+      <td class="px-4 py-3 text-center">
+        <button onclick="bukaModalAhli('${a.id}')" class="text-blue-600 hover:text-blue-800 text-xs mr-3">✏️ Edit</button>
+        <button onclick="padamAhli('${a.id}')" class="text-red-500 hover:text-red-700 text-xs">🗑️ Padam</button>
+      </td>
+    </tr>`).join('');
+}
+
+// ======================== MODUL AKTIVITI ========================
+function tukarTabAktiviti(tab) {
+  ['senarai','kehadiran'].forEach(t => {
+    document.getElementById('tab-panel-'+t).classList.toggle('hidden', t !== tab);
+    document.getElementById('tab-'+t).classList.toggle('aktif-tab', t === tab);
+    document.getElementById('tab-'+t).classList.toggle('text-gray-500', t !== tab);
+  });
+  if (tab === 'kehadiran') isikanPilihanAktiviti();
+}
+
+function bukaModalAktiviti(id = null) {
+  document.getElementById('modal-aktiviti-tajuk').textContent = id ? 'Kemaskini Aktiviti' : 'Tambah Aktiviti Baru';
+  document.getElementById('aktiviti-id').value = '';
+  ['nama','tempat','penerangan'].forEach(f => document.getElementById('aktiviti-'+f).value = '');
+  document.getElementById('aktiviti-tarikh').value = '';
+  document.getElementById('aktiviti-status').value = 'Akan Datang';
+
+  if (id) {
+    const a = dapatData(KEYS.aktiviti).find(x => x.id === id);
+    if (a) {
+      document.getElementById('aktiviti-id').value = a.id;
+      document.getElementById('aktiviti-nama').value = a.nama;
+      document.getElementById('aktiviti-tarikh').value = a.tarikh;
+      document.getElementById('aktiviti-tempat').value = a.tempat || '';
+      document.getElementById('aktiviti-penerangan').value = a.penerangan || '';
+      document.getElementById('aktiviti-status').value = a.status;
+    }
+  }
+  document.getElementById('modal-aktiviti').classList.add('aktif');
+}
+
+function simpanAktiviti() {
+  const nama = document.getElementById('aktiviti-nama').value.trim();
+  const tarikh = document.getElementById('aktiviti-tarikh').value;
+  if (!nama || !tarikh) { tunjukToast('Sila isi Nama dan Tarikh', 'ralat'); return; }
+
+  const data = dapatData(KEYS.aktiviti);
+  const id = document.getElementById('aktiviti-id').value;
+  const objek = {
+    id: id || janaId(),
+    nama, tarikh,
+    tempat: document.getElementById('aktiviti-tempat').value.trim(),
+    penerangan: document.getElementById('aktiviti-penerangan').value.trim(),
+    status: document.getElementById('aktiviti-status').value,
+    kehadiran: []
+  };
+
+  if (id) {
+    const idx = data.findIndex(a => a.id === id);
+    if (idx > -1) { objek.kehadiran = data[idx].kehadiran || []; data[idx] = objek; }
+  } else {
+    data.push(objek);
+  }
+  simpanData(KEYS.aktiviti, data);
+  tutupModal('modal-aktiviti');
+  tunjukToast(id ? 'Aktiviti dikemaskini' : 'Aktiviti baru ditambah');
+  renderAktiviti();
+}
+
+function padamAktiviti(id) {
+  if (!confirm('Adakah anda pasti mahu memadam aktiviti ini?')) return;
+  simpanData(KEYS.aktiviti, dapatData(KEYS.aktiviti).filter(a => a.id !== id));
+  tunjukToast('Aktiviti telah dipadam');
+  renderAktiviti();
+}
+
+function renderAktiviti() {
+  const tapisan = document.getElementById('tapisan-status-aktiviti').value;
+  let aktiviti = dapatData(KEYS.aktiviti);
+  if (tapisan) aktiviti = aktiviti.filter(a => a.status === tapisan);
+  aktiviti.sort((a,b) => new Date(b.tarikh) - new Date(a.tarikh));
+
+  const ahli = dapatData(KEYS.ahli);
+  const tbody = document.getElementById('jadual-aktiviti');
+  const tiada = document.getElementById('tiada-aktiviti');
+
+  if (!aktiviti.length) { tbody.innerHTML = ''; tiada.classList.remove('hidden'); return; }
+  tiada.classList.add('hidden');
+
+  const badgeStatus = { 'Akan Datang': 'badge-akan', 'Sedang Berjalan': 'badge-berjalan', 'Selesai': 'badge-selesai' };
+  tbody.innerHTML = aktiviti.map((a, i) => {
+    const kehadiran = a.kehadiran ? a.kehadiran.length : 0;
+    const pct = ahli.length ? (kehadiran / ahli.length * 100).toFixed(0) : 0;
+    return `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3 text-gray-500">${i+1}</td>
+      <td class="px-4 py-3 font-medium text-gray-800">${a.nama}</td>
+      <td class="px-4 py-3 text-gray-600">${formatTarikh(a.tarikh)}</td>
+      <td class="px-4 py-3 text-gray-600">${a.tempat || '—'}</td>
+      <td class="px-4 py-3"><span class="badge ${badgeStatus[a.status]}">${a.status}</span></td>
+      <td class="px-4 py-3 text-gray-600">${kehadiran} orang ${ahli.length ? '('+pct+'%)' : ''}</td>
+      <td class="px-4 py-3 text-center">
+        <button onclick="bukaModalAktiviti('${a.id}')" class="text-blue-600 hover:text-blue-800 text-xs mr-3">✏️ Edit</button>
+        <button onclick="padamAktiviti('${a.id}')" class="text-red-500 hover:text-red-700 text-xs">🗑️ Padam</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function isikanPilihanAktiviti() {
+  const sel = document.getElementById('pilih-aktiviti-kehadiran');
+  const aktiviti = dapatData(KEYS.aktiviti);
+  sel.innerHTML = '<option value="">-- Pilih Aktiviti --</option>' +
+    aktiviti.map(a => `<option value="${a.id}">${a.nama} (${formatTarikh(a.tarikh)})</option>`).join('');
+}
+
+function renderKehadiran() {
+  const idAktiviti = document.getElementById('pilih-aktiviti-kehadiran').value;
+  const panel = document.getElementById('panel-kehadiran');
+  if (!idAktiviti) { panel.innerHTML = '<div class="text-center text-gray-400 py-8">Pilih aktiviti untuk melihat dan merekod kehadiran.</div>'; return; }
+
+  const aktiviti = dapatData(KEYS.aktiviti).find(a => a.id === idAktiviti);
+  const ahli = dapatData(KEYS.ahli);
+  if (!aktiviti) return;
+
+  const kehadiran = aktiviti.kehadiran || [];
+  const hadir = kehadiran.length;
+  const pct = ahli.length ? (hadir / ahli.length * 100).toFixed(0) : 0;
+
+  panel.innerHTML = `
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h3 class="font-bold text-[#162d4a]">${aktiviti.nama}</h3>
+        <div class="text-sm text-gray-500">${formatTarikh(aktiviti.tarikh)} &bull; ${aktiviti.tempat || '—'}</div>
+      </div>
+      <div class="text-right">
+        <div class="text-2xl font-bold text-[#162d4a]">${hadir}/${ahli.length}</div>
+        <div class="text-sm text-gray-500">${pct}% hadir</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+      ${ahli.map(a => `
+        <label class="flex items-center gap-3 p-3 rounded-lg border ${kehadiran.includes(a.id) ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} cursor-pointer hover:bg-blue-50">
+          <input type="checkbox" value="${a.id}" ${kehadiran.includes(a.id) ? 'checked' : ''} onchange="kemaskiniKehadiran('${idAktiviti}', '${a.id}', this.checked)" class="w-4 h-4 accent-[#162d4a]" />
+          <div>
+            <div class="text-sm font-medium text-gray-800">${a.nama}</div>
+            <div class="text-xs text-gray-400">${a.noMatrik} &bull; ${a.jawatan}</div>
+          </div>
+        </label>`).join('')}
+    </div>
+    ${!ahli.length ? '<div class="text-center text-gray-400 py-8">Tiada ahli berdaftar. Tambah ahli dalam modul Pengurusan Ahli.</div>' : ''}
+  `;
+}
+
+function kemaskiniKehadiran(idAktiviti, idAhli, hadir) {
+  const data = dapatData(KEYS.aktiviti);
+  const idx = data.findIndex(a => a.id === idAktiviti);
+  if (idx === -1) return;
+  if (!data[idx].kehadiran) data[idx].kehadiran = [];
+  if (hadir) {
+    if (!data[idx].kehadiran.includes(idAhli)) data[idx].kehadiran.push(idAhli);
+  } else {
+    data[idx].kehadiran = data[idx].kehadiran.filter(id => id !== idAhli);
+  }
+  simpanData(KEYS.aktiviti, data);
+  renderKehadiran();
+}
+
+// ======================== MODUL KEWANGAN ========================
+function tukarTabKewangan(tab) {
+  ['transaksi','yuran','carta-kew'].forEach(t => {
+    document.getElementById('tab-panel-'+t).classList.toggle('hidden', t !== tab);
+    document.getElementById('tab-'+t).classList.toggle('aktif-tab', t === tab);
+    document.getElementById('tab-'+t).classList.toggle('text-gray-500', t !== tab);
+  });
+  if (tab === 'carta-kew') renderCartaPerbelanjaan();
+  if (tab === 'yuran') renderYuran();
+}
+
+function bukaModalKewangan() {
+  document.getElementById('kew-id').value = '';
+  document.getElementById('kew-penerangan').value = '';
+  document.getElementById('kew-amaun').value = '';
+  document.getElementById('kew-jenis').value = 'Masuk';
+  document.getElementById('kew-kategori').value = 'Yuran Ahli';
+  document.getElementById('kew-tarikh').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-kewangan').classList.add('aktif');
+}
+
+function simpanKewangan() {
+  const penerangan = document.getElementById('kew-penerangan').value.trim();
+  const amaun = parseFloat(document.getElementById('kew-amaun').value);
+  const tarikh = document.getElementById('kew-tarikh').value;
+  if (!penerangan || isNaN(amaun) || amaun <= 0 || !tarikh) { tunjukToast('Sila isi semua maklumat', 'ralat'); return; }
+
+  const data = dapatData(KEYS.kewangan);
+  const id = document.getElementById('kew-id').value;
+  const objek = {
+    id: id || janaId(),
+    jenis: document.getElementById('kew-jenis').value,
+    penerangan, amaun, tarikh,
+    kategori: document.getElementById('kew-kategori').value
+  };
+
+  if (id) {
+    const idx = data.findIndex(k => k.id === id);
+    if (idx > -1) data[idx] = objek;
+  } else {
+    data.push(objek);
+  }
+  simpanData(KEYS.kewangan, data);
+  tutupModal('modal-kewangan');
+  tunjukToast('Transaksi disimpan');
+  renderKewangan();
+}
+
+function padamKewangan(id) {
+  if (!confirm('Adakah anda pasti mahu memadam transaksi ini?')) return;
+  simpanData(KEYS.kewangan, dapatData(KEYS.kewangan).filter(k => k.id !== id));
+  tunjukToast('Transaksi dipadam');
+  renderKewangan();
+}
+
+function renderKewangan() {
+  const tapisan = document.getElementById('tapisan-jenis-transaksi').value;
+  const semua = dapatData(KEYS.kewangan);
+  let data = [...semua];
+  if (tapisan) data = data.filter(k => k.jenis === tapisan);
+  data.sort((a,b) => new Date(b.tarikh) - new Date(a.tarikh));
+
+  const masuk = semua.filter(k => k.jenis === 'Masuk').reduce((s,k) => s + parseFloat(k.amaun), 0);
+  const keluar = semua.filter(k => k.jenis === 'Keluar').reduce((s,k) => s + parseFloat(k.amaun), 0);
+  document.getElementById('kew-masuk').textContent = 'RM ' + masuk.toFixed(2);
+  document.getElementById('kew-keluar').textContent = 'RM ' + keluar.toFixed(2);
+  document.getElementById('kew-baki').textContent = 'RM ' + (masuk - keluar).toFixed(2);
+
+  const tbody = document.getElementById('jadual-kewangan');
+  const tiada = document.getElementById('tiada-kewangan');
+
+  if (!data.length) { tbody.innerHTML = ''; tiada.classList.remove('hidden'); return; }
+  tiada.classList.add('hidden');
+
+  tbody.innerHTML = data.map(k => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3 text-gray-600">${formatTarikh(k.tarikh)}</td>
+      <td class="px-4 py-3 text-gray-800">${k.penerangan}</td>
+      <td class="px-4 py-3 text-gray-600">${k.kategori}</td>
+      <td class="px-4 py-3"><span class="badge ${k.jenis === 'Masuk' ? 'badge-masuk' : 'badge-keluar'}">${k.jenis}</span></td>
+      <td class="px-4 py-3 text-right font-semibold ${k.jenis === 'Masuk' ? 'text-green-600' : 'text-red-500'}">
+        ${k.jenis === 'Masuk' ? '+' : '-'} RM ${parseFloat(k.amaun).toFixed(2)}
+      </td>
+      <td class="px-4 py-3 text-center">
+        <button onclick="padamKewangan('${k.id}')" class="text-red-500 hover:text-red-700 text-xs">🗑️ Padam</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderYuran() {
+  const ahli = dapatData(KEYS.ahli);
+  const tbody = document.getElementById('jadual-yuran');
+  tbody.innerHTML = ahli.map(a => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3 font-medium text-gray-800">${a.nama}</td>
+      <td class="px-4 py-3 text-gray-600">${a.noMatrik}</td>
+      <td class="px-4 py-3 text-gray-600">${a.jawatan}</td>
+      <td class="px-4 py-3 text-center">
+        <span class="badge ${a.yuranBayar ? 'badge-aktif' : 'badge-tidak'}">${a.yuranBayar ? 'Sudah Bayar' : 'Belum Bayar'}</span>
+      </td>
+      <td class="px-4 py-3 text-center">
+        <button onclick="togolYuran('${a.id}')" class="text-xs px-3 py-1 rounded-lg border ${a.yuranBayar ? 'border-red-300 text-red-600 hover:bg-red-50' : 'border-green-400 text-green-700 hover:bg-green-50'}">
+          ${a.yuranBayar ? 'Tandakan Belum Bayar' : 'Tandakan Sudah Bayar'}
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function togolYuran(idAhli) {
+  const ahli = dapatData(KEYS.ahli);
+  const idx = ahli.findIndex(a => a.id === idAhli);
+  if (idx > -1) {
+    ahli[idx].yuranBayar = !ahli[idx].yuranBayar;
+    simpanData(KEYS.ahli, ahli);
+    tunjukToast('Status yuran dikemaskini');
+    renderYuran();
+  }
+}
+
+function renderCartaPerbelanjaan() {
+  const keluar = dapatData(KEYS.kewangan).filter(k => k.jenis === 'Keluar');
+  const kategoriMap = {};
+  keluar.forEach(k => {
+    kategoriMap[k.kategori] = (kategoriMap[k.kategori] || 0) + parseFloat(k.amaun);
+  });
+
+  if (chartPerbelanjaan) chartPerbelanjaan.destroy();
+  const ctx = document.getElementById('chartPerbelanjaan').getContext('2d');
+  const labels = Object.keys(kategoriMap);
+  const data = Object.values(kategoriMap);
+  const warna = ['#162d4a','#1e3a5f','#f0c040','#4b5563','#94a3b8','#fbbf24'];
+
+  chartPerbelanjaan = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: labels.length ? labels : ['Tiada data'],
+      datasets: [{ data: data.length ? data : [1], backgroundColor: warna }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` RM ${ctx.raw.toFixed(2)}`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ======================== MODUL PENCAPAIAN ========================
+function ikonKategoriPencapaian(k) {
+  return { 'Pertandingan': '🥇', 'Anugerah': '🏅', 'Pengiktirafan': '⭐', 'Lain-lain': '🎖️' }[k] || '🏆';
+}
+
+function bukaModalPencapaian(id = null) {
+  document.getElementById('modal-pencapaian-tajuk').textContent = id ? 'Kemaskini Pencapaian' : 'Tambah Pencapaian Baru';
+  document.getElementById('pencapaian-id').value = '';
+  ['tajuk','penerima','penerangan'].forEach(f => document.getElementById('pencapaian-'+f).value = '');
+  document.getElementById('pencapaian-tarikh').value = '';
+  document.getElementById('pencapaian-kategori').value = 'Pertandingan';
+
+  if (id) {
+    const p = dapatData(KEYS.pencapaian).find(x => x.id === id);
+    if (p) {
+      document.getElementById('pencapaian-id').value = p.id;
+      document.getElementById('pencapaian-tajuk').value = p.tajuk;
+      document.getElementById('pencapaian-tarikh').value = p.tarikh;
+      document.getElementById('pencapaian-kategori').value = p.kategori;
+      document.getElementById('pencapaian-penerima').value = p.penerima || '';
+      document.getElementById('pencapaian-penerangan').value = p.penerangan || '';
+    }
+  }
+  document.getElementById('modal-pencapaian').classList.add('aktif');
+}
+
+function simpanPencapaian() {
+  const tajuk = document.getElementById('pencapaian-tajuk').value.trim();
+  const tarikh = document.getElementById('pencapaian-tarikh').value;
+  if (!tajuk || !tarikh) { tunjukToast('Sila isi Tajuk dan Tarikh', 'ralat'); return; }
+
+  const data = dapatData(KEYS.pencapaian);
+  const id = document.getElementById('pencapaian-id').value;
+  const objek = {
+    id: id || janaId(),
+    tajuk, tarikh,
+    kategori: document.getElementById('pencapaian-kategori').value,
+    penerima: document.getElementById('pencapaian-penerima').value.trim(),
+    penerangan: document.getElementById('pencapaian-penerangan').value.trim()
+  };
+
+  if (id) {
+    const idx = data.findIndex(p => p.id === id);
+    if (idx > -1) data[idx] = objek;
+  } else {
+    data.push(objek);
+  }
+  simpanData(KEYS.pencapaian, data);
+  tutupModal('modal-pencapaian');
+  tunjukToast(id ? 'Pencapaian dikemaskini' : 'Pencapaian baru ditambah');
+  renderPencapaian();
+}
+
+function padamPencapaian(id) {
+  if (!confirm('Adakah anda pasti mahu memadam rekod pencapaian ini?')) return;
+  simpanData(KEYS.pencapaian, dapatData(KEYS.pencapaian).filter(p => p.id !== id));
+  tunjukToast('Pencapaian dipadam');
+  renderPencapaian();
+}
+
+function renderPencapaian() {
+  const tapisan = document.getElementById('tapisan-kategori-pencapaian').value;
+  let data = dapatData(KEYS.pencapaian);
+  if (tapisan) data = data.filter(p => p.kategori === tapisan);
+  data.sort((a,b) => new Date(b.tarikh) - new Date(a.tarikh));
+
+  const grid = document.getElementById('grid-pencapaian');
+  const tiada = document.getElementById('tiada-pencapaian');
+
+  if (!data.length) { grid.innerHTML = ''; tiada.classList.remove('hidden'); return; }
+  tiada.classList.add('hidden');
+
+  grid.innerHTML = data.map(p => `
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div class="bg-gradient-to-r from-[#162d4a] to-[#1e3a5f] p-5 text-center">
+        <div class="text-4xl mb-2">${ikonKategoriPencapaian(p.kategori)}</div>
+        <div class="text-white font-bold text-sm">${p.tajuk}</div>
+      </div>
+      <div class="p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">${p.kategori}</span>
+          <span class="text-xs text-gray-400">${formatTarikh(p.tarikh)}</span>
+        </div>
+        ${p.penerima ? `<div class="text-xs text-gray-600 mb-1">👤 ${p.penerima}</div>` : ''}
+        ${p.penerangan ? `<div class="text-xs text-gray-500 mb-3">${p.penerangan}</div>` : ''}
+        <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+          <button onclick="bukaModalPencapaian('${p.id}')" class="text-blue-600 hover:text-blue-800 text-xs">✏️ Edit</button>
+          <button onclick="padamPencapaian('${p.id}')" class="text-red-500 hover:text-red-700 text-xs">🗑️ Padam</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ======================== EKSPORT ========================
+function eksportAhliExcel() {
+  const ahli = dapatData(KEYS.ahli);
+  if (!ahli.length) { tunjukToast('Tiada data ahli untuk dieksport', 'ralat'); return; }
+  const baris = ahli.map((a, i) => ({
+    'Bil': i+1, 'Nama': a.nama, 'No. Matrik': a.noMatrik,
+    'No. Telefon': a.noTelefon || '', 'E-mel': a.emel || '',
+    'Tahun Pengajian': 'Tahun ' + a.tahunPengajian,
+    'Jawatan': a.jawatan, 'Status': a.status,
+    'Yuran': a.yuranBayar ? 'Sudah Bayar' : 'Belum Bayar'
+  }));
+  const ws = XLSX.utils.json_to_sheet(baris);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Senarai Ahli');
+  XLSX.writeFile(wb, 'Senarai_Ahli_Kelab_Hoteliers.xlsx');
+  tunjukToast('Fail Excel berjaya dimuat turun');
+}
+
+function eksportKewanganExcel() {
+  const data = dapatData(KEYS.kewangan);
+  if (!data.length) { tunjukToast('Tiada data kewangan untuk dieksport', 'ralat'); return; }
+  const baris = data.map((k, i) => ({
+    'Bil': i+1, 'Tarikh': k.tarikh, 'Penerangan': k.penerangan,
+    'Kategori': k.kategori, 'Jenis': k.jenis,
+    'Amaun (RM)': parseFloat(k.amaun).toFixed(2)
+  }));
+  const ws = XLSX.utils.json_to_sheet(baris);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Kewangan');
+  XLSX.writeFile(wb, 'Penyata_Kewangan_Kelab_Hoteliers.xlsx');
+  tunjukToast('Fail Excel berjaya dimuat turun');
+}
+
+function eksportKehadiranPDF() {
+  const idAktiviti = document.getElementById('pilih-aktiviti-kehadiran').value;
+  if (!idAktiviti) { tunjukToast('Sila pilih aktiviti dahulu', 'ralat'); return; }
+
+  const aktiviti = dapatData(KEYS.aktiviti).find(a => a.id === idAktiviti);
+  const ahli = dapatData(KEYS.ahli);
+  if (!aktiviti) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.text('LAPORAN KEHADIRAN AKTIVITI', 14, 20);
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'normal');
+  doc.text('Kelab Hoteliers — Politeknik Kota Kinabalu', 14, 30);
+  doc.text('Aktiviti: ' + aktiviti.nama, 14, 38);
+  doc.text('Tarikh: ' + formatTarikh(aktiviti.tarikh), 14, 46);
+  doc.text('Tempat: ' + (aktiviti.tempat || '—'), 14, 54);
+
+  const kehadiran = aktiviti.kehadiran || [];
+  const baris = ahli.map((a, i) => [
+    i+1, a.nama, a.noMatrik, a.jawatan,
+    kehadiran.includes(a.id) ? 'HADIR' : 'TIDAK HADIR'
+  ]);
+
+  doc.autoTable({
+    startY: 62,
+    head: [['Bil', 'Nama', 'No. Matrik', 'Jawatan', 'Status']],
+    body: baris,
+    headStyles: { fillColor: [22, 45, 74] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    styles: { fontSize: 9 }
+  });
+
+  const hadir = kehadiran.length;
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(10);
+  doc.text(`Jumlah Hadir: ${hadir} / ${ahli.length} orang (${ahli.length ? (hadir/ahli.length*100).toFixed(0) : 0}%)`, 14, finalY);
+
+  doc.save('Kehadiran_' + aktiviti.nama.replace(/\s/g,'_') + '.pdf');
+  tunjukToast('Laporan PDF berjaya dimuat turun');
+}
+
+// ======================== INIT ========================
+document.getElementById('tarikh-sekarang').textContent = tarikhSekarang();
+renderUtama();
+</script>
+</body>
+</html>
